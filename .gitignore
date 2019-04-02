@@ -2,4 +2,4 @@
 elm-stuff
 # elm-repl generated files
 repl-temp-*
-apikey.txt
+web/config.js
