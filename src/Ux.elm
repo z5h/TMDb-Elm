@@ -2,9 +2,12 @@ module Ux exposing
     ( button
     , buttonWithIcon
     , colorDarkBackground
+    , colorDetailBackground
     , colorShadow
     , colorShadowNoAlpha
     , colorWhite
+    , easeInRight
+    , easeOutRight
     , focus
     , fontSizeDefault
     , fontSizeLarge
@@ -13,6 +16,7 @@ module Ux exposing
     , hr
     , id
     , invert
+    , menu
     , none
     , opacity
     , separator
@@ -22,7 +26,6 @@ module Ux exposing
     , spaceSmall
     , textInput
     , toGrey
-    , translateLeft
     , underlineTextInput
     , withAppendableAttributes
     , withAttributes
@@ -51,6 +54,11 @@ colorWhite =
     Element.rgb 1.0 1.0 1.0
 
 
+colorDetailBackground : Element.Color
+colorDetailBackground =
+    Element.rgb255 0x00 0x96 0x88
+
+
 colorElementBorder : Element.Color
 colorElementBorder =
     Element.rgb255 0x6F 0xCA 0xC2
@@ -68,7 +76,7 @@ colorShadowNoAlpha =
 
 colorShadow : Element.Color
 colorShadow =
-    Element.rgba 0.8 0.8 0.8 0.5
+    Element.rgba 0 0 0 0.5
 
 
 spaceBig : Int
@@ -101,13 +109,34 @@ fontSizeSmall =
     15
 
 
-translateLeft : Float -> Element.Attribute msg
-translateLeft float =
+menu : List (Element.Attribute msg) -> Element msg -> Element msg
+menu attributes content =
+    Element.el
+        ([ Element.paddingXY 24 18
+         , Element.width Element.fill
+         , Background.color colorDarkBackground
+         , Font.color colorWhite
+         , Font.family [ Font.typeface "Helvetica" ]
+         , Font.size 24
+         , Font.bold
+         ]
+            ++ attributes
+        )
+        content
+
+
+easeOutRight : Float -> Element.Attribute msg
+easeOutRight float =
+    easeInRight (1.0 - float)
+
+
+easeInRight : Float -> Element.Attribute msg
+easeInRight float =
     let
         s =
-            100.0 * float |> round |> String.fromInt
+            100.0 * (1 - float) |> round |> String.fromInt
     in
-    Html.Attributes.style "transform" ("translate(-" ++ s ++ "%)")
+    Html.Attributes.style "transform" ("translate(" ++ s ++ "%)")
         |> Element.htmlAttribute
 
 

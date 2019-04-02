@@ -21,7 +21,7 @@ type Route
     = -- /
       Home
       -- /movie/<movie-code>
-    | Movie String
+    | Movie Int
     | NotFound
 
 
@@ -33,7 +33,7 @@ routeParser =
 
         --
         , UrlParser.map Movie
-            (UrlParser.s "movie" </> UrlParser.string)
+            (UrlParser.s "movie" </> UrlParser.int)
         ]
 
 
@@ -44,8 +44,8 @@ toString route =
                 Home ->
                     Builder.absolute [] []
 
-                Movie string ->
-                    Builder.absolute [ "movie", string ] []
+                Movie int ->
+                    Builder.absolute [ "movie", String.fromInt int ] []
 
                 NotFound ->
                     Builder.relative [ "notFound" ] []
