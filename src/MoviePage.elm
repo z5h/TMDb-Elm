@@ -79,40 +79,61 @@ body : Data.Movie -> Element Msg
 body movieData =
     Element.column
         [ Element.spacing 24
+        , Element.width Element.fill
+        ]
+        [ title movieData
+        , imageAndDetails movieData
+        , overview movieData
+        ]
+
+
+title : Data.Movie -> Element Msg
+title movieData =
+    Element.el
+        [ Background.color Ux.colorDetailBackground
+        , Element.width Element.fill
+        , Font.size 32
+        , Element.paddingXY 24 21
+        , Border.shadow { offset = ( 0, 2 ), size = 1, blur = 8, color = Ux.colorShadow }
+        , Font.color Ux.colorWhite
+        , Font.light
         ]
     <|
-        [ Element.el
-            [ Background.color Ux.colorDetailBackground
-            , Element.width Element.fill
-            , Font.size 32
-            , Element.paddingXY 24 21
-            , Border.shadow { offset = ( 0, 2 ), size = 1, blur = 8, color = Ux.colorShadow }
-            , Font.color Ux.colorWhite
-            , Font.light
+        Element.el
+            [ Element.width Element.fill
+            , Ux.overflowHidden
+            , Element.height <| Element.px 34
             ]
-          <|
+        <|
             Element.text movieData.originalTitle
-        , Element.row
-            [ Element.spacing 24
-            , Element.paddingXY 24 0
-            , Font.family [ Font.typeface "Helvetica" ]
-            , Font.size 24
-            , Font.light
-            ]
-            [ Element.image [ Element.width <| Element.fillPortion 1 ] <| Data.imageData movieData
-            , Element.column
-                [ Element.width <| Element.fillPortion 1
-                , Element.height Element.fill
-                , Element.spacing Ux.spaceSmall
-                ]
-                [ Element.text <| String.fromInt movieData.releaseYear
-                , Element.text <| String.fromFloat movieData.voteAverage
-                ]
-            ]
-        , Element.paragraph
-            [ Element.paddingXY 24 0
-            , Font.family [ Font.typeface "Helvetica" ]
-            , Element.width Element.fill
-            ]
+
+
+overview : Data.Movie -> Element Msg
+overview movieData =
+    Element.el
+        [ Element.paddingXY 24 0, Element.width Element.fill ]
+    <|
+        Element.paragraph
+            [ Font.family [ Font.typeface "Helvetica" ] ]
             [ Element.text movieData.overview ]
+
+
+imageAndDetails : Data.Movie -> Element Msg
+imageAndDetails movieData =
+    Element.row
+        [ Element.spacing 24
+        , Element.paddingXY 24 0
+        , Font.family [ Font.typeface "Helvetica" ]
+        , Font.size 24
+        , Font.light
+        ]
+        [ Element.image [ Element.width <| Element.fillPortion 1 ] <| Data.imageData movieData
+        , Element.column
+            [ Element.width <| Element.fillPortion 1
+            , Element.height Element.fill
+            , Element.spacing Ux.spaceSmall
+            ]
+            [ Element.text <| String.fromInt movieData.releaseYear
+            , Element.text <| String.fromFloat movieData.voteAverage ++ " / 10"
+            ]
         ]

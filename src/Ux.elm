@@ -8,6 +8,7 @@ module Ux exposing
     , colorWhite
     , easeInRight
     , easeOutRight
+    , ellipsis
     , focus
     , fontSizeDefault
     , fontSizeLarge
@@ -19,6 +20,8 @@ module Ux exposing
     , menu
     , none
     , opacity
+    , overflowHidden
+    , positionFixed
     , separator
     , showIf
     , spaceBig
@@ -172,6 +175,24 @@ id =
 hidden : Element.Attribute msg
 hidden =
     Html.Attributes.style "visibility" "hidden"
+        |> Element.htmlAttribute
+
+
+ellipsis : Element.Attribute msg
+ellipsis =
+    Html.Attributes.style "text-overflow" "ellipsis"
+        |> Element.htmlAttribute
+
+
+overflowHidden : Element.Attribute msg
+overflowHidden =
+    Html.Attributes.style "overflow" "hidden"
+        |> Element.htmlAttribute
+
+
+positionFixed : Element.Attribute msg
+positionFixed =
+    Html.Attributes.style "position" "fixed"
         |> Element.htmlAttribute
 
 

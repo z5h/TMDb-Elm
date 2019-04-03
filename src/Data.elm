@@ -1,6 +1,7 @@
 module Data exposing
     ( Movie
     , PopularResponse
+    , getMoviesUrl
     , imageData
     , movieDecoder
     , popularResponseDecoder
@@ -14,6 +15,14 @@ imageData movie =
     { src = "http://image.tmdb.org/t/p/w342" ++ movie.posterPath
     , description = "Poster for " ++ movie.originalTitle
     }
+
+
+getMoviesUrl : { a | apiKey : String, nextApiResultsPage : Int } -> String
+getMoviesUrl { apiKey, nextApiResultsPage } =
+    "https://api.themoviedb.org/3/movie/popular?api_key="
+        ++ apiKey
+        ++ "&page="
+        ++ String.fromInt nextApiResultsPage
 
 
 type alias Movie =

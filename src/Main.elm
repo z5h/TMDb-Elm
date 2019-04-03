@@ -1,17 +1,15 @@
 module Main exposing (main)
 
 import Base.Animations as Animations exposing (Animations)
+import Base.Util as Util
 import Browser
 import Browser.Events
 import Browser.Navigation exposing (Key)
 import ComponentResult
 import Data
 import Element exposing (Element)
-import Element.Background as Background
-import Element.Border as Border
 import Element.Events as Events
 import Element.Font as Font
-import Html exposing (Html)
 import Http
 import MoviePage
 import Route exposing (Route)
@@ -59,64 +57,16 @@ type Msg
     | LoadMore
 
 
-newRoute : Model -> Route -> ( Model, Cmd Msg )
-newRoute model route =
-    let
-        _ =
-            Debug.log "newRoute" route
-    in
-    case route of
-        Route.Home ->
-            Animations.animate MovieDetailClose 300 model.animations
-                |> ComponentResult.mapMsg AnimationMsg
-                |> ComponentResult.mapModel
-                    (\newAnimations ->
-                        { model
-                            | animations = newAnimations
-                            , showMoviePage = False
-                        }
-                    )
-                |> ComponentResult.resolve
-
-        Route.Movie int ->
-            let
-                maybeMovie =
-                    model.movies
-                        |> List.filter
-                            (\movieData -> movieData.id == int)
-                        |> List.head
-
-                _ =
-                    Debug.log "maybeMovie" maybeMovie
-            in
-            case maybeMovie of
-                Nothing ->
-                    ( model, Cmd.none )
-
-                Just movie ->
-                    let
-                        newAnimationResult =
-                            Animations.animate MovieDetailOpen 300 model.animations
-                                |> ComponentResult.mapMsg AnimationMsg
-
-                        newPageResult =
-                            MoviePage.initWithMovie movie
-                                |> ComponentResult.mapMsg MoviePageMsg
-                    in
-                    ComponentResult.map2Model
-                        (\animationModel pageModel ->
-                            { model
-                                | animations = animationModel
-                                , moviePageModel = pageModel
-                                , showMoviePage = True
-                            }
-                        )
-                        newAnimationResult
-                        newPageResult
-                        |> ComponentResult.resolve
-
-        Route.NotFound ->
-            ( model, Cmd.none )
+main : Program Flags Model Msg
+main =
+    Browser.application
+        { init = init
+        , view = view
+        , update = update
+        , subscriptions = subscriptions
+        , onUrlRequest = OnUrlRequest
+        , onUrlChange = OnUrlChange
+        }
 
 
 init : Flags -> Url -> Key -> ( Model, Cmd Msg )
@@ -141,23 +91,6 @@ init flags url key =
     ( model, Cmd.batch [ Route.push model.key (Route.fromUrl url), getMovies model ] )
 
 
-goHome : { a | key : Key } -> Cmd msg
-goHome model =
-    Route.push model.key Route.Home
-
-
-main : Program Flags Model Msg
-main =
-    Browser.application
-        { init = init
-        , view = view
-        , update = update
-        , subscriptions = subscriptions
-        , onUrlRequest = OnUrlRequest
-        , onUrlChange = OnUrlChange
-        }
-
-
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
@@ -166,17 +99,66 @@ subscriptions model =
         ]
 
 
+view : Model -> Browser.Document Msg
+view model =
+    { title = "TMDb"
+    , body =
+        [ Element.layout
+            [ Element.inFront (Ux.menu [] <| Element.text "Pop Movies")
+            , Element.height Element.fill
+            , Font.size Ux.fontSizeDefault
+            , if model.showMoviePage || Animations.isAnimating model.animations MovieDetailClose then
+                Element.inFront <|
+                    Element.el
+                        [ Element.width <| Element.px model.width
+                        , Element.height <| Element.px model.height
+                        , Animations.animated
+                            model.animations
+                            MovieDetailOpen
+                            Ux.easeInRight
+                            |> Maybe.withDefault Ux.none
+                        , Animations.animated
+                            model.animations
+                            MovieDetailClose
+                            Ux.easeOutRight
+                            |> Maybe.withDefault Ux.none
+                        ]
+                    <|
+                        (MoviePage.view model.moviePageModel
+                            |> Element.map MoviePageMsg
+                        )
+
+              else
+                Ux.none
+            ]
+          <|
+            Element.column []
+                [ Element.wrappedRow [] <|
+                    (model.movies |> List.map (viewMovie model))
+                , Ux.menu
+                    [ Events.onClick LoadMore ]
+                    (Element.text "Load More")
+                ]
+        ]
+    }
+
+
+viewMovie : Model -> Data.Movie -> Element Msg
+viewMovie model movieData =
+    Element.link []
+        { url = Route.toString (Route.Movie movieData.id)
+        , label =
+            Element.el
+                [ Element.width <| Element.px <| (model.width // 2)
+                ]
+            <|
+                Element.image [ Element.width <| Element.px <| model.width // 2 ] <|
+                    Data.imageData movieData
+        }
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    let
-        _ =
-            case msg of
-                AnimationMsg _ ->
-                    msg
-
-                _ ->
-                    Debug.log "msg" msg
-    in
     case msg of
         AnimationMsg animationMsg ->
             Animations.update animationMsg model.animations
@@ -213,32 +195,19 @@ update msg model =
                     )
 
                 Err httpError ->
-                    let
-                        errorMsg =
-                            case httpError of
-                                Http.BadUrl string ->
-                                    "bad url " ++ string
-
-                                Http.Timeout ->
-                                    "timeout"
-
-                                Http.NetworkError ->
-                                    "network error"
-
-                                Http.BadStatus int ->
-                                    "bad status " ++ String.fromInt int
-
-                                Http.BadBody string ->
-                                    "bad body " ++ string
-                    in
-                    update (Error errorMsg) { model | loading = False }
+                    ( { model
+                        | errors = Util.httpErrorString httpError :: model.errors
+                        , loading = False
+                      }
+                    , Cmd.none
+                    )
 
         OnUrlRequest urlRequest ->
             case urlRequest of
                 Browser.Internal url ->
                     ( model, Browser.Navigation.pushUrl model.key (Url.toString url) )
 
-                Browser.External str ->
+                Browser.External _ ->
                     ( model, Cmd.none )
 
         OnUrlChange url ->
@@ -264,71 +233,70 @@ update msg model =
                 |> ComponentResult.resolve
 
 
+newRoute : Model -> Route -> ( Model, Cmd Msg )
+newRoute model route =
+    case route of
+        Route.Home ->
+            Animations.animate MovieDetailClose 300 model.animations
+                |> ComponentResult.mapMsg AnimationMsg
+                |> ComponentResult.mapModel
+                    (\newAnimations ->
+                        { model
+                            | animations = newAnimations
+                            , showMoviePage = False
+                        }
+                    )
+                |> ComponentResult.resolve
+
+        Route.Movie int ->
+            let
+                maybeMovie =
+                    model.movies
+                        |> List.filter
+                            (\movieData -> movieData.id == int)
+                        |> List.head
+            in
+            case maybeMovie of
+                Nothing ->
+                    ( model, Cmd.none )
+
+                Just movie ->
+                    let
+                        newAnimationResult =
+                            Animations.animate MovieDetailOpen 300 model.animations
+                                |> ComponentResult.mapMsg AnimationMsg
+
+                        newPageResult =
+                            MoviePage.initWithMovie movie
+                                |> ComponentResult.mapMsg MoviePageMsg
+                    in
+                    ComponentResult.map2Model
+                        (\animationModel pageModel ->
+                            { model
+                                | animations = animationModel
+                                , moviePageModel = pageModel
+                                , showMoviePage = True
+                            }
+                        )
+                        newAnimationResult
+                        newPageResult
+                        |> ComponentResult.resolve
+
+        Route.NotFound ->
+            ( model, goHome model )
+
+
+goHome : { a | key : Key } -> Cmd msg
+goHome model =
+    Route.push model.key Route.Home
+
+
 getMovies : { a | apiKey : String, nextApiResultsPage : Int } -> Cmd Msg
-getMovies { apiKey, nextApiResultsPage } =
+getMovies params =
     Http.get
-        { url =
-            "https://api.themoviedb.org/3/movie/popular?api_key="
-                ++ apiKey
-                ++ "&page="
-                ++ String.fromInt nextApiResultsPage
+        { url = Data.getMoviesUrl params
         , expect =
             Http.expectJson
                 GotPopularResponse
                 Data.popularResponseDecoder
-        }
-
-
-view : Model -> Browser.Document Msg
-view model =
-    { title = "TMDb"
-    , body =
-        [ Element.layout
-            [ Element.inFront (Ux.menu [] <| Element.text "Pop Movies")
-            , Element.height Element.fill
-            , Font.size Ux.fontSizeDefault
-            , if model.showMoviePage || Animations.isAnimating model.animations MovieDetailClose then
-                Element.inFront <|
-                    Element.el
-                        [ Element.width <| Element.px model.width
-                        , Element.height <| Element.px model.height
-                        , Animations.animated model.animations MovieDetailOpen Ux.easeInRight
-                            |> Maybe.withDefault Ux.none
-                        , Animations.animated model.animations MovieDetailClose Ux.easeOutRight
-                            |> Maybe.withDefault Ux.none
-                        ]
-                    <|
-                        (MoviePage.view model.moviePageModel
-                            |> Element.map MoviePageMsg
-                        )
-
-              else
-                Ux.none
-            ]
-          <|
-            Element.column []
-                [ Element.wrappedRow [] <|
-                    (model.movies |> List.map (viewMovie model))
-                , Ux.menu
-                    [ Events.onClick LoadMore ]
-                    (Element.text "Load More")
-                ]
-        ]
-    }
-
-
-viewMovie : Model -> Data.Movie -> Element Msg
-viewMovie model movieData =
-    Element.link []
-        { url = Route.toString (Route.Movie movieData.id)
-        , label =
-            Element.el
-                [ Element.width <| Element.px <| (model.width // 2 - 1)
-                ]
-            <|
-                Element.image [ Element.width <| Element.px <| model.width // 2 ]
-                    { src =
-                        "http://image.tmdb.org/t/p/w342" ++ movieData.posterPath
-                    , description = ""
-                    }
         }

@@ -24,8 +24,6 @@ module Icon exposing
     )
 
 import Element exposing (Element)
-import Element.Background as Background
-import Element.Border as Border
 import Html.Attributes
 
 
