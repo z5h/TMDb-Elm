@@ -17,7 +17,6 @@ module Base.Animations exposing
 import Base.ListSet as Set exposing (Set)
 import Browser.Events
 import ComponentResult exposing (ComponentResult)
-import Dict exposing (Dict)
 import Ease
 import Task
 import Time exposing (Posix)
@@ -274,7 +273,7 @@ subscriptions : Animations animatable -> Sub (Msg animatable)
 subscriptions model =
     if Set.isEmpty model.animations then
         Browser.Events.onAnimationFrame Tick
-        -- Sub.none -- bug
+        -- don't use Sub.none because of an elm subscriptions bug
 
     else
         Browser.Events.onAnimationFrame Tick
